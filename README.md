@@ -1,79 +1,63 @@
-# Minas Caixa Imóveis - Rental Research MCP Module
+# Minas Caixa Imóveis — Central Rental Research MCP Provider
 
-Reverse-engineered API integration and domain module boundary for the rental search system of Minas Caixa Imóveis (`minascaixaimoveis.com.br`).
+Reverse-engineered rental search engine and API client for **Minas Caixa Imóveis** (`https://www.minascaixaimoveis.com.br/`).
 
-## 1. Scope & Capabilities
+Engineered as a pluggable adapter for the **Central Rental Research MCP (Model Context Protocol)** server following **SOLID**, **Clean Code**, **Object Calisthenics**, and **Design Patterns** in Python.
 
-- **Rental Search & Listing**: Reverse-engineered client-side AJAX endpoint (`POST /imoveis/ajax/`).
-- **Filter Discovery**: Endpoints for cities (`/cidadeAjax`), neighborhoods (`/bairroAjax`), property types (`/tipoAjax`), and condominiums (`/condominios`).
-- **Pagination Mechanics**: 20 items per page, 1-indexed page parameter, total count tracking.
-- **Full Property Detail Retrieval**: Batch and single property retrieval (`POST /imoveis/codigos/`) returning 219 attributes per property.
-- **Unauthenticated**: No authentication, tokens, or cookies required for rental listing and research.
+---
 
-## 2. Architecture & Design Principles
+## 📚 Documentation
 
-Designed as the central Rental Research MCP boundary interface adhering to:
-- **Priority**: Correctness first, modularity second, style principles third.
-- **SOLID & Clean Code**: Single responsibility, clear ports and adapters, explicit interfaces.
-- **Object Calisthenics**:
-  - One indent level per method.
-  - No `else` statements (guard clauses, early returns, polymorphism).
-  - Domain primitive wrapping (`PropertyCode`, `RentalPrice`, `PageNumber`, `CitySlug`, `SortOrder`).
-  - First-class collections (`PropertyCollection`, `CityCollection`, `NeighborhoodCollection`).
-  - One dot per line.
-  - No abbreviations.
-  - Entities kept small (functions ≤ 15 lines, classes ≤ 100 lines, modules < 200 lines).
-  - Maximum 2 instance variables per class.
+- **[Documentation Index](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/docs/README.md)** (`docs/README.md`): Overview of all project documentation.
+- **[Single Source of Truth (SOT) API Spec](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/docs/sot/minascaixa_api_spec.md)** (`docs/sot/minascaixa_api_spec.md`): Complete endpoint contracts, payload schemas, query parameters, and boundary validation rules.
+- **[ADR 0001: MCP Architecture & Design](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/docs/adr/0001-rental-search-mcp-module-design.md)** (`docs/adr/0001-rental-search-mcp-module-design.md`): Hexagonal architecture, Object Calisthenics enforcement, and design patterns.
+- **[API Reference](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/docs/api_reference.md)** (`docs/api_reference.md`): Ready-to-use cURL recipes and parameter matrices.
+- **[Reverse-Engineering Research Findings](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/docs/api-research.md)** (`docs/api-research.md`): In-depth research notes on DOM analysis, JavaScript deconstruction, and upstream CRM mechanics.
+- **[Scripts & MCP Module Guide](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/scripts/README.md)** (`scripts/README.md`): Package layout and CLI runner guide.
+- **[Architecture Standards](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/scripts/ARCHITECTURE.md)** (`scripts/ARCHITECTURE.md`): Calisthenics and SOLID compliance breakdown.
+- **[Usage & MCP Integration](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/scripts/USAGE.md)** (`scripts/USAGE.md`): How to use the Python modules and integrate into MCP servers.
+- **[Research Plan & Verification Log](file:///home/samuelcaldas/repos/imobiliarias/minascaixaimoveis/scripts/research-plan.md)** (`scripts/research-plan.md`): Step-by-step methodology and empirical test matrix.
 
-## 3. Directory Layout
+---
 
-```text
-├── docs/
-│   └── api-research.md          # Comprehensive reverse-engineered API documentation
-├── scripts/
-│   ├── research-plan.md         # Research plan, empirical test matrix, and findings log
-│   └── run_research.py          # Verification and execution runner script
-├── minascaixa/                  # Reusable Python package (MCP module boundary)
-│   ├── __init__.py              # Factory and public API exports
-│   ├── domain/                  # Value objects, models, collections, and exceptions
-│   │   ├── exceptions.py
-│   │   ├── primitives.py
-│   │   ├── models.py
-│   │   └── collections.py
-│   ├── infrastructure/          # HTTP transport, endpoints, payload builder, deserializer
-│   │   ├── endpoints.py
-│   │   ├── http_transport.py
-│   │   ├── payload_builder.py
-│   │   └── deserializer.py
-│   └── application/             # Interfaces, URL parser, and RentalResearchService facade
-│       ├── interfaces.py
-│       ├── url_parser.py
-│       └── service.py
-├── tests/                       # Unit and live integration test suite
-│   ├── test_domain_primitives.py
-│   ├── test_url_parser.py
-│   ├── test_payload_builder.py
-│   ├── test_deserializer.py
-│   ├── test_service_mock.py
-│   └── test_live_integration.py
-└── requirements.txt             # Frozen dependencies
-```
+## ⚡ Quickstart
 
-## 4. Quickstart
-
-### Environment Setup
+### Run Automated Tests
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Running Verification Script
-```bash
-python scripts/run_research.py
-```
-
-### Running Test Suite
-```bash
+python3 scripts/run_tests.py
+# or with pytest:
 pytest -v
 ```
+
+### Search Rentals
+```bash
+# Search rentals in Timóteo
+python3 scripts/run_search.py --city timoteo
+
+# Search 3-bedroom rentals in Timóteo
+python3 scripts/run_search.py --city timoteo --bedrooms 3
+```
+
+### View Listing Details
+```bash
+# View complete details for property code 6161
+python3 scripts/run_property_detail.py 6161
+```
+
+### Inspect Available Localities & Facets
+```bash
+python3 scripts/run_facets.py
+```
+
+---
+
+## 🏛️ Code Architecture & Standards Compliance
+
+- **No `else` Keyword**: 100% eliminated using guard clauses, early returns, and polymorphic handlers.
+- **Single Level of Indentation**: All methods adhere to at most 1 indent level.
+- **Wrapped Primitives**: Domain concepts (`ListingPrice`, `PropertyCode`, `GeoCoordinate`, `RentalFilter`) are immutable Value Objects.
+- **First-Class Collections**: `RentalListingCollection` and `FacetCollection` wrap lists without leaking raw mutable collections.
+- **Size Limits**: Functions ≤ 15 lines, Classes ≤ 100 lines, Modules < 200 lines.
+- **Instance Variables**: All classes hold at most 2 instance variables.
+- **One Dot per Line**: Method chaining is eliminated in favor of explicit intermediate assignments.
+- **Zero Abbreviations**: Clear, descriptive domain naming across all modules.
