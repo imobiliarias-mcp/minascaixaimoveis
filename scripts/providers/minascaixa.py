@@ -50,7 +50,7 @@ class MinasCaixaRentalProvider(RentalProviderProtocol):
         query_builder = MinasCaixaQueryBuilder()
         form_payload = query_builder.build_parameters(search_filter)
         raw_response = self._transport.post_form(endpoint, form_payload)
-        parser = SearchResultParser()
+        parser = SearchResultParser(self._configuration.public_base_url)
         return parser.parse_search_response(raw_response)
 
     def get_property_detail(self, code: PropertyCode) -> RentalPropertyDetail:
@@ -58,7 +58,7 @@ class MinasCaixaRentalProvider(RentalProviderProtocol):
         endpoint = self._configuration.detail_endpoint()
         payload = {"codigo": code.value(), "finalidade": "aluguel"}
         raw_response = self._transport.post_form(endpoint, payload)
-        parser = PropertyDetailParser()
+        parser = PropertyDetailParser(self._configuration.public_base_url)
         return parser.parse_detail_response(raw_response)
 
     def get_facets(self) -> FacetCollection:

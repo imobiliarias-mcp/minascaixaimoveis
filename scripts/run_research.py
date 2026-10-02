@@ -33,7 +33,9 @@ def _display_sample_properties(collection):
     for index, prop in enumerate(collection):
         if index >= 3:
             break
+        property_data = prop.to_dictionary()
         print(f"  [{prop.code().value}] {prop.title()} - {prop.rental_value()}")
+        print(f"    Link: {property_data['url']}")
     print()
 
 

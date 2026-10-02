@@ -2,6 +2,7 @@
 
 import re
 from typing import Any, Dict, List
+from urllib.parse import urlsplit
 from scripts.domain.value_objects import ListingPrice, PropertyCode
 from scripts.domain.entities import (
     ListingIdentity,
@@ -17,11 +18,33 @@ from scripts.domain.collections import (
     RentalSearchResult,
     FacetCollection,
 )
-from scripts.domain.exceptions import PropertyNotFoundException
+from scripts.domain.exceptions import (
+    InvalidPropertyCodeException,
+    PropertyNotFoundException,
+)
 
 
 class SearchResultParser:
     """Parses property search response payloads into RentalSearchResult."""
+
+    def __init__(
+        self, public_base_url: str = "https://www.minascaixaimoveis.com.br"
+    ) -> None:
+        """Validate the public portal base used for property links."""
+        parsed_url = urlsplit(public_base_url.strip())
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValueError("Public base URL must use HTTP(S) and include a host")
+        if parsed_url.query or parsed_url.fragment:
+            raise ValueError("Public base URL cannot contain a query or fragment")
+        self._public_base_url = public_base_url.rstrip("/")
+
+    def _validated_property_code(self, raw_code: Any) -> PropertyCode:
+        code_string = str(raw_code).strip() if isinstance(raw_code, (str, int)) else ""
+        if not re.fullmatch(r"[0-9]+", code_string) or int(code_string) <= 0:
+            raise InvalidPropertyCodeException(
+                f"Invalid codigo for public property URL: {raw_code!r}"
+            )
+        return PropertyCode(code_string)
 
     def _parse_price_float(self, raw_price_string: str) -> float:
         cleaned = re.sub(r"[^\d,]", "", str(raw_price_string))
@@ -31,8 +54,7 @@ class SearchResultParser:
         return float(normalized)
 
     def _build_core(self, item: Dict[str, Any]) -> ListingCore:
-        code_string = str(item.get("codigo", ""))
-        code_vo = PropertyCode(code_string)
+        code_vo = self._validated_property_code(item.get("codigo"))
         title_string = str(item.get("titulo", ""))
         identity = ListingIdentity(code=code_vo, title=title_string)
         price_amount = self._parse_price_float(item.get("valor", "0"))
@@ -41,16 +63,22 @@ class SearchResultParser:
         valuation = ListingValuation(rental_price=price_vo, property_type=property_type)
         return ListingCore(identity=identity, valuation=valuation)
 
-    def _build_details(self, item: Dict[str, Any]) -> ListingDetails:
+    def _build_details(self, item: Dict[str, Any], property_code: str) -> ListingDetails:
         neighborhood = str(item.get("bairro", ""))
         city = str(item.get("cidade", ""))
         location = f"{neighborhood}, {city}" if neighborhood and city else city
         cover_url = str(item.get("urlfotoprincipalp", ""))
-        return ListingDetails(location_summary=location, media_url=cover_url)
+        public_url = f"{self._public_base_url}/detalhe-imovel/{property_code}"
+        return ListingDetails(
+            location_summary=location,
+            media_url=cover_url,
+            public_url=public_url,
+        )
 
     def _extract_single_listing(self, item: Dict[str, Any]) -> RentalListing:
         core = self._build_core(item)
-        details = self._build_details(item)
+        property_code = core.identity.code.value()
+        details = self._build_details(item, property_code)
         return RentalListing(core=core, details=details)
 
     def parse_search_response(self, response_data: Dict[str, Any]) -> RentalSearchResult:
@@ -67,14 +95,19 @@ class SearchResultParser:
 class PropertyDetailParser:
     """Parses raw property detail payload into RentalPropertyDetail."""
 
+    def __init__(
+        self, public_base_url: str = "https://www.minascaixaimoveis.com.br"
+    ) -> None:
+        """Configure public URLs for a property detail response."""
+        self._search_parser = SearchResultParser(public_base_url)
+
     def parse_detail_response(self, response_data: Dict[str, Any]) -> RentalPropertyDetail:
         """Extract full details from single property API response."""
         raw_list = response_data.get("lista", [])
         if not raw_list:
             raise PropertyNotFoundException("Property record not found in response")
         item = raw_list[0]
-        search_parser = SearchResultParser()
-        listing = search_parser._extract_single_listing(item)
+        listing = self._search_parser._extract_single_listing(item)
         description = str(item.get("descricao", item.get("metadescription", "")))
         amenities = self._extract_amenities_summary(item)
         profile = DetailedProfile(description=description, amenities_summary=amenities)

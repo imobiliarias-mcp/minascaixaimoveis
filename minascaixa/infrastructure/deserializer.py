@@ -1,27 +1,44 @@
 """Deserializes raw JSON responses into domain models and collections."""
 
+import re
 from typing import Any, Dict, List
-from minascaixa.domain.primitives import PropertyCode
+from urllib.parse import urlsplit
+
+from minascaixa.domain.collections import (
+    CityCollection,
+    CityItem,
+    NeighborhoodCollection,
+    NeighborhoodItem,
+    PropertyCollection,
+)
+from minascaixa.domain.exceptions import ValidationError
 from minascaixa.domain.models import (
+    PropertyCore,
+    PropertyFeatures,
     PropertyIdentity,
     PropertyLocation,
-    PropertyCore,
+    PropertyNavigation,
     PropertyPricing,
-    PropertyFeatures,
     PropertyProfile,
     PropertySummary,
 )
-from minascaixa.domain.collections import (
-    PropertyCollection,
-    CityItem,
-    CityCollection,
-    NeighborhoodItem,
-    NeighborhoodCollection,
-)
+from minascaixa.domain.primitives import PropertyCode
 
 
 class ResponseDeserializer:
     """Transforms raw API responses into domain collections and entities."""
+
+    def __init__(
+        self,
+        public_base_url: str = "https://www.minascaixaimoveis.com.br",
+    ) -> None:
+        """Configure and validate the base used for public property links."""
+        parsed_url = urlsplit(public_base_url.strip())
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            raise ValidationError("Public base URL must use HTTP(S) and include a host")
+        if parsed_url.query or parsed_url.fragment:
+            raise ValidationError("Public base URL cannot contain a query or fragment")
+        self._public_base_url = public_base_url.rstrip("/")
 
     def deserialize_search_results(self, data: Dict[str, Any]) -> PropertyCollection:
         """Parses property listing items into a PropertyCollection."""
@@ -32,11 +49,22 @@ class ResponseDeserializer:
     def _deserialize_single_summary(self, raw_item: Dict[str, Any]) -> PropertySummary:
         core = self._build_property_core(raw_item)
         profile = self._build_property_profile(raw_item)
-        return PropertySummary(core=core, profile=profile)
+        code = core.identity.code.as_string()
+        public_url = f"{self._public_base_url}/detalhe-imovel/{code}"
+        navigation = PropertyNavigation(url=public_url)
+        return PropertySummary(core=core, profile=profile, navigation=navigation)
+
+    def _validated_property_code(self, raw_code: Any) -> PropertyCode:
+        code_string = str(raw_code).strip() if isinstance(raw_code, (str, int)) else ""
+        if not re.fullmatch(r"[0-9]+", code_string):
+            raise ValidationError(f"Invalid codigo for public property URL: {raw_code!r}")
+        code_number = int(code_string)
+        if code_number <= 0:
+            raise ValidationError(f"Invalid codigo for public property URL: {raw_code!r}")
+        return PropertyCode(code_number)
 
     def _build_property_core(self, item: Dict[str, Any]) -> PropertyCore:
-        code_number = int(item.get("codigo", 0))
-        code = PropertyCode(code_number)
+        code = self._validated_property_code(item.get("codigo"))
         title = str(item.get("titulo", ""))
         identity = PropertyIdentity(code=code, title=title)
         city = str(item.get("cidade", ""))

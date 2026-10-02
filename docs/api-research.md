@@ -285,7 +285,7 @@ Retrieves suggested related listings based on property attributes.
 #### Web Fallback Routes:
 - `GET https://www.minascaixaimoveis.com.br/imovel/{slug}/{codigo}`
 - `GET https://www.minascaixaimoveis.com.br/detalhe-imovel/{codigo}`
-Both return the complete HTML detail page with pre-rendered server metadata.
+Both return the complete HTML detail page with pre-rendered server metadata. Search results expose the latter as the public `url`, built from the validated response `codigo` (never the internal API `id`); this URL is derived from search data and does not trigger an additional detail request. The core deserializer and scripts provider accept a separate `public_base_url` override, leaving the API transport `base_url` independent.
 
 ---
 

@@ -47,6 +47,7 @@ def display_results(result) -> None:
     for listing in result.listings():
         summary_line = listing.format_summary()
         print(summary_line)
+        print(f"  Link: {listing.details.public_url}")
     print("-" * 75)
 
 

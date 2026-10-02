@@ -30,6 +30,10 @@ class PropertyCollection:
             raise IndexError("Collection is empty")
         return self._items[0]
 
+    def to_dictionary_list(self) -> list[dict]:
+        """Serialize each property summary without changing its value types."""
+        return [item.to_dictionary() for item in self._items]
+
 
 class CityItem:
     """City entry with slug and display name."""

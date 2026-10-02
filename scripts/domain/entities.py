@@ -1,6 +1,8 @@
 """Domain entities for rental property listings."""
 
 from dataclasses import dataclass
+from urllib.parse import urlsplit
+
 from scripts.domain.value_objects import (
     ListingPrice,
     PropertyCode,
@@ -37,6 +39,7 @@ class ListingDetails:
 
     location_summary: str
     media_url: str
+    public_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -62,8 +65,25 @@ class RentalListing:
         location_str = self.details.location_summary
         return f"[{code_str}] {type_str} em {location_str} - {price_str}/mês"
 
+    def _validate_public_url(self) -> None:
+        """Reject missing or non-property URLs before serialization."""
+        listing_code = self.code()
+        try:
+            parsed_url = urlsplit(self.details.public_url)
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid public property URL for codigo {listing_code}"
+            ) from exc
+        expected_path = f"/detalhe-imovel/{listing_code}"
+        is_absolute = parsed_url.scheme in {"http", "https"} and bool(parsed_url.netloc)
+        if not is_absolute or parsed_url.path.rstrip("/") != expected_path:
+            raise ValueError(
+                f"A valid public property URL is required for codigo {listing_code}"
+            )
+
     def to_dictionary(self) -> dict:
         """Export entity into a plain dictionary representation."""
+        self._validate_public_url()
         return {
             "code": self.core.identity.code.value(),
             "title": self.core.identity.title,
@@ -72,6 +92,7 @@ class RentalListing:
             "rental_price_formatted": self.core.valuation.rental_price.format_brl(),
             "location": self.details.location_summary,
             "media_url": self.details.media_url,
+            "url": self.details.public_url,
         }
 
 
