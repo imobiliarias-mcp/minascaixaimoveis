@@ -149,6 +149,33 @@ def test_script_parser_rejects_missing_public_property_code() -> None:
         SearchResultParser().parse_search_response({"lista": [{"codigo": ""}]})
 
 
+def test_script_mcp_search_exposes_condo_fee() -> None:
+    payload = {
+        "quantidade": 1,
+        "lista": [
+            {
+                "codigo": "7001",
+                "titulo": "Apto Centro",
+                "tipo": "Apartamento",
+                "valor": "R$ 1.500,00",
+                "valorcondominio": "R$ 350,00",
+                "cidade": "Timóteo",
+                "bairro": "Centro",
+                "urlfotoprincipalp": "https://cdn.example/7001.jpg",
+            }
+        ],
+    }
+
+    class CustomTransport:
+        def post_form(self, url, form_data):
+            return payload
+
+    provider = MinasCaixaRentalProvider(CustomTransport(), MinasCaixaConfiguration())
+    adapter = MinasCaixaMcpAdapter(provider)
+    listing = adapter.search_rentals()["listings"][0]
+    assert listing["condo_fee"] == 350.0
+
+
 def test_core_verification_runner_prints_public_link(capsys) -> None:
     collection = ResponseDeserializer().deserialize_search_results(MINAS_SEARCH_PAYLOAD)
     _display_sample_properties(collection)

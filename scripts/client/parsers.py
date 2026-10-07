@@ -60,7 +60,11 @@ class SearchResultParser:
         price_amount = self._parse_price_float(item.get("valor", "0"))
         price_vo = ListingPrice(price_amount)
         property_type = str(item.get("tipo", "Imóvel"))
-        valuation = ListingValuation(rental_price=price_vo, property_type=property_type)
+        condo_amount = self._parse_price_float(item.get("valorcondominio", "0"))
+        condo_fee = condo_amount if condo_amount > 0.0 else None
+        valuation = ListingValuation(
+            rental_price=price_vo, property_type=property_type, condo_fee=condo_fee
+        )
         return ListingCore(identity=identity, valuation=valuation)
 
     def _build_details(self, item: Dict[str, Any], property_code: str) -> ListingDetails:
