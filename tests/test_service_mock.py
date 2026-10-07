@@ -149,6 +149,47 @@ def test_script_parser_rejects_missing_public_property_code() -> None:
         SearchResultParser().parse_search_response({"lista": [{"codigo": ""}]})
 
 
+def test_search_parser_extracts_monthly_iptu() -> None:
+    parser = SearchResultParser()
+    payload = {
+        "lista": [
+            {
+                "codigo": "7001",
+                "titulo": "apartamento",
+                "tipo": "Apartamento",
+                "valor": "1.500,00",
+                "valoriptu": "150,00",
+                "cidade": "Timóteo",
+                "bairro": "Centro",
+            }
+        ]
+    }
+    result = parser.parse_search_response(payload)
+    listing = result.collection.listings[0].to_dictionary()
+    assert listing["iptu"] == 150.0
+
+
+def test_search_parser_normalizes_annual_iptu_to_monthly() -> None:
+    parser = SearchResultParser()
+    payload = {
+        "lista": [
+            {
+                "codigo": "7002",
+                "titulo": "casa",
+                "tipo": "Casa",
+                "valor": "2.000,00",
+                "valoriptuanual": "1200,00",
+                "cidade": "Timóteo",
+                "bairro": "Centro",
+            }
+        ]
+    }
+    result = parser.parse_search_response(payload)
+    listing = result.collection.listings[0].to_dictionary()
+    assert listing["iptu"] == 100.0
+
+
+
 def test_script_mcp_search_exposes_condo_fee() -> None:
     payload = {
         "quantidade": 1,

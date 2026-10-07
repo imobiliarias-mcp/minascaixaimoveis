@@ -53,18 +53,34 @@ class SearchResultParser:
             return 0.0
         return float(normalized)
 
-    def _build_core(self, item: Dict[str, Any]) -> ListingCore:
-        code_vo = self._validated_property_code(item.get("codigo"))
-        title_string = str(item.get("titulo", ""))
-        identity = ListingIdentity(code=code_vo, title=title_string)
+    def _normalize_iptu_fee(self, monthly: float, annual: float) -> float | None:
+        if monthly > 0.0:
+            return round(monthly, 2)
+        if annual > 0.0:
+            return round(annual / 12.0, 2)
+        return None
+
+    def _build_valuation(self, item: Dict[str, Any]) -> ListingValuation:
         price_amount = self._parse_price_float(item.get("valor", "0"))
         price_vo = ListingPrice(price_amount)
         property_type = str(item.get("tipo", "Imóvel"))
         condo_amount = self._parse_price_float(item.get("valorcondominio", "0"))
         condo_fee = condo_amount if condo_amount > 0.0 else None
-        valuation = ListingValuation(
-            rental_price=price_vo, property_type=property_type, condo_fee=condo_fee
+        iptu_monthly = self._parse_price_float(item.get("valoriptu", "0"))
+        iptu_annual = self._parse_price_float(item.get("valoriptuanual", "0"))
+        iptu_fee = self._normalize_iptu_fee(iptu_monthly, iptu_annual)
+        return ListingValuation(
+            rental_price=price_vo,
+            property_type=property_type,
+            condo_fee=condo_fee,
+            iptu=iptu_fee,
         )
+
+    def _build_core(self, item: Dict[str, Any]) -> ListingCore:
+        code_vo = self._validated_property_code(item.get("codigo"))
+        title_string = str(item.get("titulo", ""))
+        identity = ListingIdentity(code=code_vo, title=title_string)
+        valuation = self._build_valuation(item)
         return ListingCore(identity=identity, valuation=valuation)
 
     def _build_details(self, item: Dict[str, Any], property_code: str) -> ListingDetails:
